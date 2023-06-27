@@ -629,11 +629,17 @@ individual_plots <- function(individual_data,
   plot_data <- individual_data |>
     dplyr::filter(symbol %in% selected_gene) |>
     tidyr::pivot_longer(!symbol, names_to = "sample", values_to = "value")
+  
   if (ncol(plot_data) < 31) {
     x_axis_labels <- 14
   } else {
     x_axis_labels <- 10
   }
+  
+  anova_results <- aov(symbol ~ value, data = plot_data)
+  plot_data <- plot_data |>
+    dplyr::mutate(pval = summary(anova_results)[["Pr(>F)"]])|>
+    tidyr::pivot_longer(!symbol, names_to = "sample", values_to = "value")
 
   if (gene_plot_box == TRUE) {
     ind_line <- ggplot2::ggplot(
