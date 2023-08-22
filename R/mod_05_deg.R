@@ -209,6 +209,16 @@ mod_05_deg_2_ui <- function(id) {
           \"A-B\" means A vs. B (See heatmap).
             Interaction terms start with \"I:\""),
         conditionalPanel(
+          condition = "input.step_2 == 'Heatmap'",
+          selectInput(
+            inputId = ns("heatmap_gene_num"),
+            label = NULL,
+            choices = c(5,10,15,20,25,30,35,40,'ALL'),
+            selected = "ALL"
+          ),
+          ns = ns
+        ),
+        conditionalPanel(
           condition = "input.step_2 == 'Volcano Plot' |
             input.step_2 == 'MA Plot' |
             input.step_2 == 'Scatter Plot'",
