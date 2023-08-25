@@ -3166,3 +3166,22 @@ mod_label_server <- function(id, data_list, method = c("volcano", "ma")) {
     }))
   })
 }
+
+#' UI component to customize gene labels
+#'
+#' This component contains an action button to activate the pop-up modal to
+#' select how many genes are displayed on the heat map and what method to
+#' choose them.
+#'
+#' @param id Namespace ID
+#'
+#' @return Shiny module
+heat_gene_select_ui <- function(id) {
+  ns <- shiny::NS(id)
+  tagList(
+    actionButton(
+      inputId = ns("heat_select_genes"),
+      label = "Select Genes"
+    )
+  )
+}

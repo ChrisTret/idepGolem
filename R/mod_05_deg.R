@@ -210,12 +210,7 @@ mod_05_deg_2_ui <- function(id) {
             Interaction terms start with \"I:\""),
         conditionalPanel(
           condition = "input.step_2 == 'Heatmap'",
-          selectInput(
-            inputId = ns("heatmap_gene_num"),
-            label = NULL,
-            choices = c(5,10,15,20,25,30,35,40,'ALL'),
-            selected = "ALL"
-          ),
+          heat_gene_select_ui("select_heat"),
           ns = ns
         ),
         conditionalPanel(
