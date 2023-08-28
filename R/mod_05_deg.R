@@ -760,7 +760,8 @@ mod_05_deg_server <- function(id, pre_process, idep_data, load_data, tab) {
         limma = deg$limma,
         select_contrast = input$select_contrast,
         processed_data = pre_process$data(),
-        contrast_samples = contrast_samples()
+        contrast_samples = contrast_samples(),
+        top_genes = deg$limma$top_genes
       )
     })
 
@@ -770,6 +771,14 @@ mod_05_deg_server <- function(id, pre_process, idep_data, load_data, tab) {
       req(!is.null(heat_data()))
       heat_data()$bar
     })
+    
+    ################# Maybe vol_data() must come first...
+    heat_gene_select_server(
+      "heat_select",
+      data_list = reactive({
+        vol_data()
+      })
+    )
 
     heatmap_module <- mod_12_heatmap_server(
       id = "12_heatmap_1",

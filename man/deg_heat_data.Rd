@@ -4,7 +4,13 @@
 \alias{deg_heat_data}
 \title{Find data for the heatmap}
 \usage{
-deg_heat_data(limma, select_contrast, processed_data, contrast_samples)
+deg_heat_data(
+  limma,
+  select_contrast,
+  processed_data,
+  contrast_samples,
+  top_genes
+)
 }
 \arguments{
 \item{limma}{Return results list from the limma_value function}
@@ -16,6 +22,9 @@ for the significant genes}
 
 \item{contrast_samples}{Columns that are in the group of the
 selected comparison}
+
+\item{top_genes}{top_genes list from results list of the
+limma_value function}
 }
 \value{
 Submatrix of the processed data with only the significantly

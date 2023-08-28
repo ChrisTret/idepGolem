@@ -2445,6 +2445,8 @@ plot_upset <- function(results) {
 #' @param processed_data Data that has been through the pre-processing
 #' @param contrast_samples Columns that are in the group of the
 #'  selected comparison
+#' @param top_genes top_genes list from results list of the
+#'  limma_value function
 #'
 #' @export
 #' @return Submatrix of the processed data with only the significantly
@@ -2453,13 +2455,14 @@ plot_upset <- function(results) {
 deg_heat_data <- function(limma,
                           select_contrast,
                           processed_data,
-                          contrast_samples) {
+                          contrast_samples,
+                          top_genes = NULL) {
   genes <- limma$results
 
-  if (is.null(genes)) {
+    if (is.null(genes)) {
     return(NULL)
   }
-
+  
   # If not interaction term
   if (!grepl("I:", select_contrast)) {
     ix <- match(select_contrast, colnames(genes))
@@ -2495,15 +2498,51 @@ deg_heat_data <- function(limma,
 
 
   iz <- contrast_samples
+  
+  
+  #################### UNDER CONSTRUCTION START ########################
+ 
+  #  if (is.null(select_contrast) || is.null(comparisons) ||
+  #   length(top_genes) == 0) {
+  #   return(NULL)
+  # }   if (length(comparisons) == 1) {
+  #   top_1 <- top_genes[[1]]
+  # } else {
+  
+  if (!is.null(top_genes)){
+    genes <- match(rownames(top_genes), rownames(genes))
+    
+    top <- top_genes
+    ia <- match(select_contrast, names(top))
+    if (is.na(ia)) {
+      return(NULL)
+    }
+    top_1 <- top[[ia]]
+  #}
+  if (dim(top_1)[1] == 0) {
+    grid::grid.newpage()
+    return(grid::grid.text("Not available.", 0.5, 0.5))
+  }
+  colnames(top_1) <- c("Fold", "FDR")
+  # Convert to data frame
+  top_1 <- as.data.frame(top_1)
+  
+  #################### UNDER CONSTRUCTION END ########################
+  
 
   # Color bar
   bar <- as.vector(genes[, ix])
   names(bar) <- row.names(genes)
   bar <- bar[bar != 0]
-
+  browser()
   # Retreive related data
   genes <- processed_data[iy, iz, drop = FALSE]
 
+  #################### UNDER CONSTRUCTION START ######################
+  genes <- merge(genes, top_1, by = "row.names")
+  #################### UNDER CONSTRUCTION END ########################
+  
+  
   genes <- genes[order(bar), , drop = FALSE]
   bar <- sort(bar)
 
@@ -2549,7 +2588,7 @@ volcano_data <- function(select_contrast,
   if (is.null(select_contrast) || is.null(comparisons) ||
     length(top_genes) == 0) {
     return(NULL)
-  }
+  }   
   if (length(comparisons) == 1) {
     top_1 <- top_genes[[1]]
   } else {
@@ -3184,4 +3223,141 @@ heat_gene_select_ui <- function(id) {
       label = "Select Genes"
     )
   )
+}
+
+
+#' Server component to choose genes for heatmap
+#'
+#' This component contains the pop-up modal and data processing to customize
+#'  how genes are chosen on the heatmap.
+#'
+#' @param id Namespace ID
+#' @param data_list List of gene data from \code{volcano_data()}
+#'
+#' @return A shiny module.
+#' @export
+heat_gene_select_server <- function(id, data_list) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+      choice_list <- list(
+        "Absolute LFC" = 1,
+        "-log10( Adjusted p-Val )" = 2,
+      )
+      name <- "-log10 (Adj. p-Val )"
+  
+    # pop up modal for selections ----
+    observeEvent(input$customize_labels, {
+      shiny::showModal(
+        shiny::modalDialog(
+          size = "m",
+          p("Customize which genes are labeled."),
+          selectInput(
+            inputId = ns("gene_label_type"),
+            label = "Gene selection",
+            choices = list(
+              "Label top n genes" = 1,
+              "Label genes above a certain threshold" = 2
+            ),
+            selected = 1
+          ),
+          conditionalPanel(
+            condition = "input.gene_label_type == 1",
+            fluidRow(
+              column(
+                width = 6,
+                numericInput(
+                  inputId = ns("num_genes"),
+                  label = "Label top n genes",
+                  min = 1,
+                  max = 50,
+                  value = 10
+                )
+              ),
+              column(
+                width = 6,
+                selectInput(
+                  inputId = ns("sort_type"),
+                  label = "By",
+                  choices = choice_list,
+                  selected = 1
+                )
+              )
+            ),
+            ns = ns
+          ),
+          conditionalPanel(
+            condition = "input.gene_label_type == 2",
+            fluidRow(
+              p("Label genes with"),
+              column(
+                width = 6,
+                numericInput(
+                  inputId = ns("min_lfc"),
+                  label = "Absolute LFC greater than",
+                  min = 2,
+                  max = 20,
+                  value = 3
+                )
+              ),
+              column(
+                width = 6,
+                numericInput(
+                  inputId = ns("min_value"),
+                  label = paste0(name, " greater than"),
+                  min = 5,
+                  max = 60,
+                  value = 20
+                )
+              )
+            ),
+            ns = ns
+          ),
+          p("Only genes that were identified as differently expressed can be labeled.")
+        )
+      )
+    })
+    
+    # filter genes based on selections ----
+    gene_labels <- reactive({
+      req(data_list())
+      data <- data_list()$data |>
+        dplyr::filter(upOrDown != "None")
+      
+        data <- data |>
+          dplyr::mutate(
+            var = -log10(FDR),
+            Fold = abs(Fold),
+          )
+      
+      if (is.null(input$gene_label_type)) {
+        genes <- NULL
+      } else if (input$gene_label_type == 1) {
+        if (input$sort_type == 1) {
+          sorted <- data |>
+            dplyr::arrange(dplyr::desc(Fold)) |>
+            dplyr::slice(1:input$num_genes)
+          genes <- sorted |>
+            dplyr::pull(Row.names)
+        } else if (input$sort_type == 2) {
+          sorted <- data |>
+            dplyr::arrange(dplyr::desc(var)) |>
+            dplyr::slice(1:input$num_genes)
+          genes <- sorted |>
+            dplyr::pull(Row.names)
+        }
+      } else if (input$gene_label_type == 2) {
+        sorted <- data |>
+          dplyr::filter(Fold >= input$min_lfc & var > input$min_value)
+        genes <- sorted |>
+          dplyr::pull(Row.names)
+      }
+      
+      return(genes)
+    })
+    
+    return(reactive({
+      gene_labels()
+    }))
+  })
 }
