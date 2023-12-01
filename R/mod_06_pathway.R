@@ -1062,18 +1062,21 @@ mod_06_pathway_server <- function(id, pre_process, deg, idep_data, tab) {
 
     kegg_image <- reactive({
       req(!is.null(input$sig_pathways_kegg))
-      tmpfile <- kegg_pathway(
-        go = input$select_go,
-        gage_pathway_data = pathway_list_data()[, 1:5],
-        sig_pathways = input$sig_pathways_kegg,
-        select_contrast = input$select_contrast,
-        limma = deg$limma(),
-        converted = pre_process$converted(),
-        idep_data = idep_data,
-        select_org = pre_process$select_org(),
-        low_color = kegg_colors[[input$kegg_color_select]][1],
-        high_color = kegg_colors[[input$kegg_color_select]][2]
-      )
+      withProgress(message = "Downloading KEGG pathway", {
+        incProgress(0.2)
+        tmpfile <- kegg_pathway(
+          go = input$select_go,
+          gage_pathway_data = pathway_list_data()[, 1:5],
+          sig_pathways = input$sig_pathways_kegg,
+          select_contrast = input$select_contrast,
+          limma = deg$limma(),
+          converted = pre_process$converted(),
+          idep_data = idep_data,
+          select_org = pre_process$select_org(),
+          low_color = kegg_colors[[input$kegg_color_select]][1],
+          high_color = kegg_colors[[input$kegg_color_select]][2]
+        )
+      })
      tmpfile$src
     })
     
@@ -1085,7 +1088,7 @@ mod_06_pathway_server <- function(id, pre_process, deg, idep_data, tab) {
         file.copy(kegg_image(), file)
       },
       contentType = "image/png"
-    ) 
+    )
 
     # List of pathways with details
     pathway_list_data <- reactive({
